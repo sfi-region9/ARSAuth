@@ -54,6 +54,12 @@ public class ARSAuth {
             Register register = new Gson().fromJson(string, Register.class);
             return processRegister(register);
         });
+
+        post("destroy_user", (request, response) -> {
+            String string = request.body();
+            User user = new Gson().fromJson(string, User.class);
+            return processDestroy(user);
+        });
     }
 
     public static String processLogin(Login login) throws SQLException {
@@ -65,6 +71,29 @@ public class ARSAuth {
             return log[1];
         } else {
             return "Error while login, please try again or on the website https://reports.nwa2coco.fr : " + log[1];
+        }
+    }
+
+    public static String processDestroy(User user) {
+        if (!checkID(user))
+            return "Invalid ID";
+        db.update("DELETE FROM users WHERE SCC='" + user.getScc() + "'");
+        return "User destroyed";
+    }
+
+    public static boolean checkID(User user) {
+        ResultSet rs = db.getResult("SELECT * FROM users WHERE SCC='" + user.getScc() + "'");
+        try {
+            if (rs.next()) {
+                if (rs.getString("uuid").equalsIgnoreCase(user.getUuid())) {
+                    return true;
+                }
+                return false;
+            } else {
+                return false;
+            }
+        } catch (SQLException e) {
+            return false;
         }
     }
 
