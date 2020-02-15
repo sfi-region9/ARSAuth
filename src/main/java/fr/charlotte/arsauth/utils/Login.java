@@ -1,6 +1,7 @@
-package fr.colin.arsauth.utils;
+package fr.charlotte.arsauth.utils;
 
 public class Login {
+
 
     private String username;
     private String password;

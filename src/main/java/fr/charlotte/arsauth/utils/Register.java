@@ -1,4 +1,4 @@
-package fr.colin.arsauth.utils;
+package fr.charlotte.arsauth.utils;
 
 public class Register {
 

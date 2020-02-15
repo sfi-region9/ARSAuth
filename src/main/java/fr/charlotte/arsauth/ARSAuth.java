@@ -1,21 +1,18 @@
-package fr.colin.arsauth;
+package fr.charlotte.arsauth;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.google.gson.Gson;
-import fr.colin.arsauth.config.Config;
-import fr.colin.arsauth.config.ConfigWrapper;
-import fr.colin.arsauth.utils.Database;
-import fr.colin.arsauth.utils.Login;
-import fr.colin.arsauth.utils.Register;
-import fr.colin.arssdk.ARSdk;
-import fr.colin.arssdk.objects.User;
+import fr.charlotte.arsauth.config.Config;
+import fr.charlotte.arsauth.utils.Register;
+import fr.charlotte.arssdk.ARSdk;
+import fr.charlotte.arssdk.objects.User;
+import fr.charlotte.arsauth.utils.Database;
+import fr.charlotte.arsauth.utils.Login;
 import org.apache.commons.lang3.StringUtils;
-import sun.rmi.runtime.Log;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.UUID;
 
 import static spark.Spark.*;
@@ -27,9 +24,11 @@ public class ARSAuth {
     private static ARSdk sdk = ARSdk.DEFAULT_INSTANCE;
 
     public static void main(String... args) {
-        Config c = new ConfigWrapper().getConfig();
-        db = new Database(c.getDB_HOST(), c.getDB_NAME(), c.getDB_USER(), c.getDB_PASSWORD());
-
+        try {
+            db = Config.loadConfiguration();
+        } catch (IllegalAccessException e) {
+            System.exit(0);
+        }
         System.out.println("   ");
         System.out.println("Welcome in ARSAuth v1.0");
         System.out.println("   ");
@@ -38,15 +37,18 @@ public class ARSAuth {
         setupRoutes();
     }
 
-    public static void setupRoutes() {
+    private static void setupRoutes() {
 
 
         get("hello", (request, response) -> "Hello World");
 
         post("login", (request, response) -> {
             String string = request.body();
+            System.out.println(string);
             Login login = new Gson().fromJson(string, Login.class);
-            return processLogin(login);
+            String s = processLogin(login);
+            System.out.println(s);
+            return s;
         });
 
         post("register", (request, response) -> {
@@ -70,18 +72,18 @@ public class ARSAuth {
             //TODO : RETURN ALL THE VALUES
             return log[1];
         } else {
-            return "Error while login, please try again or on the website https://reports.nwa2coco.fr : " + log[1];
+            return "Error while login, please try again or on the website https://client.sfiars.eu : " + log[1];
         }
     }
 
-    public static String processDestroy(User user) {
+    private static String processDestroy(User user) {
         if (!checkID(user))
             return "Invalid ID";
         db.update("DELETE FROM users WHERE SCC='" + user.getScc() + "'");
         return "User destroyed";
     }
 
-    public static boolean checkID(User user) {
+    private static boolean checkID(User user) {
         ResultSet rs = db.getResult("SELECT * FROM users WHERE SCC='" + user.getScc() + "'");
         try {
             if (rs.next()) {
@@ -97,16 +99,16 @@ public class ARSAuth {
         }
     }
 
-    public static String processRegister(Register register) throws IOException, SQLException {
+    private static String processRegister(Register register) throws IOException, SQLException {
         String name = register.getName();
         String user = register.getUsername();
         String password = register.getPassword();
-        String vaisseau = register.getVessel();
+        String vessel = register.getVessel();
         String email = register.getEmail();
         String scc = register.getScc();
-        String[] sd = register(name, user, password, vaisseau, email, scc);
+        String[] sd = register(name, user, password, vessel, email, scc);
         if (Boolean.parseBoolean(sd[0])) {
-            sdk.registerUser(new User(name, scc, vaisseau, "", sd[1]));
+            sdk.registerUser(new User(name, scc, vessel, "", sd[1]));
             return "You are succesfully registred in the database :) !, You can now login with the app or the website";
         } else {
             return "Error while register, " + sd[1];
@@ -133,7 +135,7 @@ public class ARSAuth {
         }
     }
 
-    public static String[] register(String name, String user, String password, String vessel, String email, String scc) throws SQLException {
+    private static String[] register(String name, String user, String password, String vessel, String email, String scc) throws SQLException {
 
         if (name.length() < 4)
             return new String[]{"false", "Name too short"};
