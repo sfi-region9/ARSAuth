@@ -21,7 +21,7 @@ public class ARSAuth {
 
 
     private static Database db;
-    private static ARSdk sdk = ARSdk.DEFAULT_INSTANCE;
+    private static ARSdk sdk = new ARSdk("https://api.sfiars.eu", "https://auth.sfiars.eu");
 
     public static void main(String... args) {
         try {
@@ -80,6 +80,7 @@ public class ARSAuth {
         if (!checkID(user))
             return "Invalid ID";
         db.update("DELETE FROM users WHERE SCC='" + user.getScc() + "'");
+        db.closeConnection();
         return "User destroyed";
     }
 
@@ -88,10 +89,16 @@ public class ARSAuth {
         try {
             if (rs.next()) {
                 if (rs.getString("uuid").equalsIgnoreCase(user.getUuid())) {
+                    rs.close();
+                    db.closeConnection();
                     return true;
                 }
+                rs.close();
+                db.closeConnection();
                 return false;
             } else {
+                rs.close();
+                db.closeConnection();
                 return false;
             }
         } catch (SQLException e) {
@@ -121,6 +128,7 @@ public class ARSAuth {
         if (!rs.next())
             return new String[]{"false", "Unknow username"};
         String pass = (String) db.read("SELECT * FROM users WHERE username='" + user + "'", "password");
+
         if (BCrypt.verifyer().verify(password.toCharArray(), pass.toCharArray()).verified) {
             String username = rs.getString("username");
             String scc = rs.getString("scc");
@@ -129,8 +137,12 @@ public class ARSAuth {
             String messengerid = rs.getString("messengerid");
             String uuid = rs.getString("uuid");
             String[] s = {username, scc, vesselid, name, messengerid, uuid};
+            rs.close();
+            db.closeConnection();
             return new String[]{"true", StringUtils.join(s, "}_}")};
         } else {
+            rs.close();
+            db.closeConnection();
             return new String[]{"false", "bad password"};
         }
     }
@@ -156,11 +168,12 @@ public class ARSAuth {
         ResultSet sdf = db.getResult("SELECT * FROM users WHERE scc='" + scc + "'");
         if (sdf.next())
             return new String[]{"false", "scc already exist"};
-        sd.close();
+        sdf.close();
+
         String uuid = UUID.randomUUID().toString();
         password = BCrypt.with(BCrypt.Version.VERSION_2Y).hashToString(10, password.toCharArray());
         db.update(String.format("INSERT INTO users(username,scc,vesselid,name,mail,password,uuid,messengerid) VALUES('%s','%s','%s','%s','%s','%s','%s','undefined')", user, scc, vessel, name, email, password, uuid));
-
+        db.closeConnection();
         return new String[]{"true", uuid};
     }
 
