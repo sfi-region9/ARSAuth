@@ -21,7 +21,7 @@ public class ARSAuth {
 
 
     private static Database db;
-    private static ARSdk sdk = ARSdk.DEFAULT_INSTANCE;
+    private static ARSdk sdk = new ARSdk("https://api.sfiars.eu", "https://auth.sfiars.eu");
 
     public static void main(String... args) {
         try {
